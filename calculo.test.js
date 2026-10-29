@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { valorPorMetroQuadrado } from './calculo.js';
+import { valorPorMetroQuadrado, areaDoTerreno } from './calculo.js';
 
 test('calcula o valor por m² de um caso simples', () => {
   assert.equal(valorPorMetroQuadrado(500000, 100), 5000);
@@ -28,4 +28,19 @@ test('rejeita entradas não numéricas', () => {
   assert.throws(() => valorPorMetroQuadrado(NaN, 80), TypeError);
   assert.throws(() => valorPorMetroQuadrado(300000, '80'), TypeError);
   assert.throws(() => valorPorMetroQuadrado(Infinity, 80), TypeError);
+});
+
+test('calcula a área do terreno pela frente e fundo', () => {
+  assert.equal(areaDoTerreno(10, 30), 300);
+  assert.equal(areaDoTerreno(12.5, 25), 312.5);
+});
+
+test('valor por m² do terreno a partir de frente e fundo', () => {
+  assert.equal(valorPorMetroQuadrado(450000, areaDoTerreno(10, 30)), 1500);
+});
+
+test('rejeita frente ou fundo zero, negativo ou inválido', () => {
+  assert.throws(() => areaDoTerreno(0, 30), RangeError);
+  assert.throws(() => areaDoTerreno(10, -5), RangeError);
+  assert.throws(() => areaDoTerreno(NaN, 30), TypeError);
 });

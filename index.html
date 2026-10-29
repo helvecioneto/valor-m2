@@ -22,7 +22,7 @@
       font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
     }
     main {
-      width: 100%; max-width: 420px; background: var(--card);
+      width: 100%; max-width: 440px; background: var(--card);
       border: 1px solid var(--border); border-radius: 12px; padding: 28px;
     }
     h1 { margin: 0 0 4px; font-size: 1.4rem; }
@@ -34,31 +34,76 @@
       background: var(--bg); color: var(--text);
     }
     input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    fieldset {
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px 0; margin: 0 0 20px;
+    }
+    legend { font-weight: 700; padding: 0 6px; }
+    legend small { font-weight: 400; color: var(--muted); }
+    .modo { display: flex; gap: 6px; margin-bottom: 14px; }
+    .modo label {
+      flex: 1; margin: 0; padding: 8px; text-align: center; font-weight: 500;
+      border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+    }
+    .modo input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
+    .modo input:checked + span { color: var(--accent); font-weight: 700; }
+    .modo label:has(input:checked) { border-color: var(--accent); }
+    .modo label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .lado { display: flex; gap: 12px; }
+    .lado > div { flex: 1; }
+    [hidden] { display: none !important; }
     button {
       width: 100%; padding: 12px; font-size: 1rem; font-weight: 600;
       border: 0; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer;
     }
-    #resultado { margin-top: 22px; min-height: 3.5em; }
-    #resultado .valor { font-size: 1.8rem; font-weight: 700; }
-    #resultado .erro { color: var(--erro); }
+    #resultado { margin-top: 22px; }
+    .linha { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+    .linha:first-child { border-top: 0; }
+    .linha span { color: var(--muted); }
+    .linha strong { font-size: 1.25rem; white-space: nowrap; }
+    .erro { color: var(--erro); }
   </style>
 </head>
 <body>
   <main>
     <h1>Valor por m²</h1>
-    <p class="sub">Informe o valor do imóvel e a área construída.</p>
-    <form id="form">
+    <p class="sub">Informe o valor do imóvel, a área construída e o terreno.</p>
+    <form id="form" novalidate>
       <label for="valor">Valor do imóvel (R$)</label>
-      <input id="valor" inputmode="decimal" placeholder="Ex.: 450.000,00" required>
-      <label for="area">Área construída (m²)</label>
-      <input id="area" inputmode="decimal" placeholder="Ex.: 72,5" required>
+      <input id="valor" inputmode="decimal" placeholder="Ex.: 450.000,00">
+
+      <label for="construida">Área construída (m²)</label>
+      <input id="construida" inputmode="decimal" placeholder="Ex.: 72,5">
+
+      <fieldset>
+        <legend>Terreno <small>(opcional)</small></legend>
+        <div class="modo">
+          <label><input type="radio" name="modo" value="medidas" checked><span>Frente × fundo</span></label>
+          <label><input type="radio" name="modo" value="area"><span>Área total</span></label>
+        </div>
+        <div id="campos-medidas" class="lado">
+          <div>
+            <label for="frente">Frente (m)</label>
+            <input id="frente" inputmode="decimal" placeholder="Ex.: 10">
+          </div>
+          <div>
+            <label for="fundo">Fundo (m)</label>
+            <input id="fundo" inputmode="decimal" placeholder="Ex.: 30">
+          </div>
+        </div>
+        <div id="campos-area" hidden>
+          <label for="terreno">Área do terreno (m²)</label>
+          <input id="terreno" inputmode="decimal" placeholder="Ex.: 300">
+        </div>
+      </fieldset>
+
       <button type="submit">Calcular</button>
     </form>
     <div id="resultado" aria-live="polite"></div>
   </main>
 
   <script type="module">
-    import { valorPorMetroQuadrado, formatarReais } from './calculo.js';
+    import { valorPorMetroQuadrado, areaDoTerreno, formatarReais, formatarArea } from './calculo.js';
 
     // Converte "450.000,50" ou "450000.50" em número
     function lerNumero(texto) {
@@ -67,14 +112,42 @@
       return Number(t);
     }
 
+    const campo = (id) => document.getElementById(id).value.trim();
     const resultado = document.getElementById('resultado');
+
+    document.querySelectorAll('input[name="modo"]').forEach((radio) => {
+      radio.addEventListener('change', () => {
+        const porMedidas = radio.value === 'medidas';
+        document.getElementById('campos-medidas').hidden = !porMedidas;
+        document.getElementById('campos-area').hidden = porMedidas;
+      });
+    });
+
+    // Retorna a área do terreno em m², ou null se não foi informada
+    function lerTerreno() {
+      const modo = document.querySelector('input[name="modo"]:checked').value;
+      if (modo === 'area') {
+        return campo('terreno') ? lerNumero(campo('terreno')) : null;
+      }
+      if (!campo('frente') && !campo('fundo')) return null;
+      return areaDoTerreno(lerNumero(campo('frente')), lerNumero(campo('fundo')));
+    }
+
+    const linha = (rotulo, valor) => `<div class="linha"><span>${rotulo}</span><strong>${valor}</strong></div>`;
+
     document.getElementById('form').addEventListener('submit', (e) => {
       e.preventDefault();
       try {
-        const valor = lerNumero(document.getElementById('valor').value);
-        const area = lerNumero(document.getElementById('area').value);
-        const m2 = valorPorMetroQuadrado(valor, area);
-        resultado.innerHTML = `<div>Valor por m²:</div><div class="valor">${formatarReais(m2)}</div>`;
+        const valor = lerNumero(campo('valor'));
+        const construida = lerNumero(campo('construida'));
+        let html = linha('Valor por m² construído', formatarReais(valorPorMetroQuadrado(valor, construida)));
+
+        const terreno = lerTerreno();
+        if (terreno !== null) {
+          html += linha('Área do terreno', formatarArea(terreno));
+          html += linha('Valor por m² do terreno', formatarReais(valorPorMetroQuadrado(valor, terreno)));
+        }
+        resultado.innerHTML = html;
       } catch (erro) {
         resultado.innerHTML = `<div class="erro">${erro.message}</div>`;
       }
