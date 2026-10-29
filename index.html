@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Valor por m²</title>
+  <style>
+    :root {
+      --bg: #f5f6f8; --card: #ffffff; --text: #1d2330; --muted: #5b6475;
+      --border: #d7dbe3; --accent: #1f6feb; --erro: #c62828;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #12151b; --card: #1b2029; --text: #e7eaf0; --muted: #9aa3b5;
+        --border: #2d3442; --accent: #58a6ff; --erro: #ff7b72;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      padding: 16px; background: var(--bg); color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    main {
+      width: 100%; max-width: 420px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 12px; padding: 28px;
+    }
+    h1 { margin: 0 0 4px; font-size: 1.4rem; }
+    p.sub { margin: 0 0 24px; color: var(--muted); }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    input {
+      width: 100%; padding: 10px 12px; margin-bottom: 18px; font-size: 1rem;
+      border: 1px solid var(--border); border-radius: 8px;
+      background: var(--bg); color: var(--text);
+    }
+    input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    button {
+      width: 100%; padding: 12px; font-size: 1rem; font-weight: 600;
+      border: 0; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer;
+    }
+    #resultado { margin-top: 22px; min-height: 3.5em; }
+    #resultado .valor { font-size: 1.8rem; font-weight: 700; }
+    #resultado .erro { color: var(--erro); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Valor por m²</h1>
+    <p class="sub">Informe o valor do imóvel e a área construída.</p>
+    <form id="form">
+      <label for="valor">Valor do imóvel (R$)</label>
+      <input id="valor" inputmode="decimal" placeholder="Ex.: 450.000,00" required>
+      <label for="area">Área construída (m²)</label>
+      <input id="area" inputmode="decimal" placeholder="Ex.: 72,5" required>
+      <button type="submit">Calcular</button>
+    </form>
+    <div id="resultado" aria-live="polite"></div>
+  </main>
+
+  <script type="module">
+    import { valorPorMetroQuadrado, formatarReais } from './calculo.js';
+
+    // Converte "450.000,50" ou "450000.50" em número
+    function lerNumero(texto) {
+      const t = texto.trim().replace(/[R$\s]/g, '');
+      if (t.includes(',')) return Number(t.replace(/\./g, '').replace(',', '.'));
+      return Number(t);
+    }
+
+    const resultado = document.getElementById('resultado');
+    document.getElementById('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      try {
+        const valor = lerNumero(document.getElementById('valor').value);
+        const area = lerNumero(document.getElementById('area').value);
+        const m2 = valorPorMetroQuadrado(valor, area);
+        resultado.innerHTML = `<div>Valor por m²:</div><div class="valor">${formatarReais(m2)}</div>`;
+      } catch (erro) {
+        resultado.innerHTML = `<div class="erro">${erro.message}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>

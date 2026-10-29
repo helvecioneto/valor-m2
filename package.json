@@ -1,0 +1,11 @@
+{
+  "name": "valor-m2",
+  "version": "1.0.0",
+  "description": "Calcula o valor por metro quadrado de um imóvel.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "calcular": "node cli.js"
+  },
+  "license": "MIT"
+}
